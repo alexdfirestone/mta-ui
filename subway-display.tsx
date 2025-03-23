@@ -69,53 +69,62 @@ const STATIONS = [
   "Fulton Street",
 ]
 
+// Maximum number of trains to display per direction
+const MAX_TRAINS_PER_DIRECTION = 8
+
 export default function SubwayDisplay() {
   const [data, setData] = useState<SubwayData | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [selectedStation, setSelectedStation] = useState<string>("Union Square")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expandedLines, setExpandedLines] = useState<Record<string, boolean>>({})
 
   // Convert station name to kebab-case for API
   const getStationSlug = (stationName: string) => {
     return stationName.toLowerCase().replace(/\s+/g, '-');
   }
 
+  // Toggle expanded view for a line
+  const toggleLineExpanded = (lineKey: string) => {
+    setExpandedLines(prev => ({
+      ...prev,
+      [lineKey]: !prev[lineKey]
+    }))
+  }
+
   // Fetch data from API
-  useEffect(() => {
-    const fetchStationData = async () => {
-      setLoading(true)
-      setError(null)
+  const fetchStationData = async () => {
+    setLoading(true)
+    setError(null)
 
-      try {
-          // Add checks for undefined values
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://mta-api-bn7y.onrender.com';
-        const stationSlug: string = getStationSlug(selectedStation);
+    try {
+      // Add checks for undefined values
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://mta-api-bn7y.onrender.com';
+      const stationSlug: string = getStationSlug(selectedStation);
 
-        // console.log(apiUrl, stationSlug, process.env.NEXT_PUBLIC_API_KEY)
-
-        const response = await fetch(`${apiUrl}/api/stations/${stationSlug}/trains`, {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch data: ${response.status}`);
+      const response = await fetch(`${apiUrl}/api/stations/${stationSlug}/trains`, {
+        headers: {
+          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
         }
+      });
 
-        const data = await response.json();
-        setData(data);
-      } catch (err) {
-        console.error('Error fetching subway data:', err);
-        setError('Failed to load subway data. Please try again later.');
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.status}`);
       }
-    };
 
-    // Initial fetch
+      const data = await response.json();
+      setData(data);
+    } catch (err) {
+      console.error('Error fetching subway data:', err);
+      setError('Failed to load subway data. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
     fetchStationData();
 
     // Set up refresh interval (every 30 seconds)
@@ -175,6 +184,13 @@ export default function SubwayDisplay() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Refresh Button */}
+            <button 
+              onClick={() => fetchStationData()} 
+              className="text-amber-500 border border-amber-500 px-2 py-1 text-sm hover:bg-amber-500 hover:text-black"
+            >
+              REFRESH
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -209,63 +225,97 @@ export default function SubwayDisplay() {
       {/* Line Sections */}
       <div className="space-y-8">
         {/* Render each line section */}
-        {Object.entries(data.lines).map(([lineKey, lineData]) => (
-          <div key={lineKey} className="border border-amber-500 p-4">
-            <h2 className="text-xl font-bold mb-4">{lineData.name}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Uptown/Westbound */}
-              {(lineData.uptown || lineData.westbound) && (
-                <div>
-                  <h3 className="text-lg font-bold mb-2">
-                    {lineData.uptown ? "UPTOWN / BRONX" : "TO 8 AVE"}
-                    {lineKey === "7" && lineData.westbound && "TO HUDSON YARDS"}
-                    {lineKey === "s" && lineData.westbound && "TO TIMES SQUARE"}
-                  </h3>
-                  <div className="space-y-2">
-                    {(lineData.uptown || lineData.westbound)?.slice(0, 3).map((train, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div
-                          className={`${LINE_COLORS[train.route_id]} text-white font-bold w-8 h-8 flex items-center justify-center rounded-full`}
-                        >
-                          {train.route_id}
-                        </div>
-                        <span className="text-xl font-bold">{train.minutes_away} min</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+        {Object.entries(data.lines).map(([lineKey, lineData]) => {
+          const isExpanded = expandedLines[lineKey] || false;
+          
+          // Determine which directions are available for this line
+          const hasUptown = lineData.uptown && lineData.uptown.length > 0;
+          const hasDowntown = lineData.downtown && lineData.downtown.length > 0;
+          const hasWestbound = lineData.westbound && lineData.westbound.length > 0;
+          const hasEastbound = lineData.eastbound && lineData.eastbound.length > 0;
+          
+          // Get correct trains based on direction
+          const northTrains = hasUptown ? lineData.uptown : (hasWestbound ? lineData.westbound : []);
+          const southTrains = hasDowntown ? lineData.downtown : (hasEastbound ? lineData.eastbound : []);
+          
+          // Set display limit based on expanded state
+          const displayLimit = isExpanded ? MAX_TRAINS_PER_DIRECTION : 3;
+          
+          // Get direction labels
+          const northLabel = hasUptown ? "UPTOWN / BRONX" : 
+                            (lineKey === "L" && hasWestbound ? "TO 8 AVE" :
+                            (lineKey === "7" && hasWestbound ? "TO HUDSON YARDS" : 
+                            (lineKey === "S" && hasWestbound ? "TO TIMES SQUARE" : "WESTBOUND")));
+                            
+          const southLabel = hasDowntown ? "DOWNTOWN / BROOKLYN" : 
+                            (lineKey === "L" && hasEastbound ? "TO CANARSIE" :
+                            (lineKey === "7" && hasEastbound ? "TO FLUSHING" : "EASTBOUND"));
 
-              {/* Downtown/Eastbound */}
-              {(lineData.downtown || lineData.eastbound) && (
-                <div>
-                  <h3 className="text-lg font-bold mb-2">
-                    {lineData.downtown ? "DOWNTOWN / BROOKLYN" : "TO CANARSIE"}
-                    {lineKey === "7" && lineData.eastbound && "TO FLUSHING"}
-                  </h3>
-                  <div className="space-y-2">
-                    {(lineData.downtown || lineData.eastbound)?.slice(0, 3).map((train, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div
-                          className={`${LINE_COLORS[train.route_id]} text-white font-bold w-8 h-8 flex items-center justify-center rounded-full`}
-                        >
-                          {train.route_id}
+          return (
+            <div key={lineKey} className="border border-amber-500 p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">{lineData.name}</h2>
+                {(northTrains && northTrains.length > 3 || southTrains && southTrains.length > 3) && (
+                  <button 
+                    onClick={() => toggleLineExpanded(lineKey)}
+                    className="text-amber-500 border border-amber-500 px-2 py-1 text-sm hover:bg-amber-500 hover:text-black"
+                  >
+                    {isExpanded ? "SHOW LESS" : "SHOW MORE"}
+                  </button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Uptown/Westbound */}
+                {northTrains && northTrains.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold mb-2">{northLabel}</h3>
+                    <div className="space-y-2">
+                      {northTrains.slice(0, displayLimit).map((train, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div
+                            className={`${LINE_COLORS[train.route_id]} text-white font-bold w-8 h-8 flex items-center justify-center rounded-full`}
+                          >
+                            {train.route_id}
+                          </div>
+                          <span className="text-xl font-bold">{train.minutes_away} min</span>
+                          <span className="text-sm">({train.arrival_time_formatted})</span>
                         </div>
-                        <span className="text-xl font-bold">{train.minutes_away} min</span>
-                      </div>
-                    ))}
-                    {/* If no trains in this direction */}
-                    {(lineData.downtown || lineData.eastbound)?.length === 0 && (
-                      <div className="text-xl">No trains scheduled</div>
-                    )}
+                      ))}
+                      {northTrains.length === 0 && (
+                        <div className="text-xl">No trains scheduled</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Downtown/Eastbound */}
+                {southTrains && southTrains.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold mb-2">{southLabel}</h3>
+                    <div className="space-y-2">
+                      {southTrains.slice(0, displayLimit).map((train, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div
+                            className={`${LINE_COLORS[train.route_id]} text-white font-bold w-8 h-8 flex items-center justify-center rounded-full`}
+                          >
+                            {train.route_id}
+                          </div>
+                          <span className="text-xl font-bold">{train.minutes_away} min</span>
+                          <span className="text-sm">({train.arrival_time_formatted})</span>
+                        </div>
+                      ))}
+                      {southTrains.length === 0 && (
+                        <div className="text-xl">No trains scheduled</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   )
 }
-
