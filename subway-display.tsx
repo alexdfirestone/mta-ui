@@ -72,388 +72,74 @@ const STATIONS = [
 export default function SubwayDisplay() {
   const [data, setData] = useState<SubwayData | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [selectedStation, setSelectedStation] = useState("Union Square")
+  const [selectedStation, setSelectedStation] = useState<string>("Union Square")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // In a real app, you would fetch this data from your API based on the selected station
+  // Convert station name to kebab-case for API
+  const getStationSlug = (stationName: string) => {
+    return stationName.toLowerCase().replace(/\s+/g, '-');
+  }
+
+  // Fetch data from API
   useEffect(() => {
     const fetchStationData = async () => {
       setLoading(true)
+      setError(null)
 
-      // Simulate API call with a delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      try {
+          // Add checks for undefined values
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://mta-api-bn7y.onrender.com';
+        const stationSlug: string = getStationSlug(selectedStation);
 
-      // Sample data would be fetched from API in real implementation
-      // This would change based on the selected station
-      const sampleData: SubwayData = {
-        station: selectedStation,
-        timestamp: "2025-03-16T23:19:43.619485",
-        formatted_time: "11:19:43 PM, March 16, 2025",
-        lines: {
-          "456": {
-            name: "4/5/6 Trains (Lexington Avenue Line)",
-            uptown: [
-              {
-                route_id: "6",
-                direction: "Uptown/Bronx",
-                arrival_time: 1742181745,
-                arrival_time_formatted: "11:22:25 PM",
-                minutes_away: 2,
-              },
-              {
-                route_id: "4",
-                direction: "Uptown/Bronx",
-                arrival_time: 1742182373,
-                arrival_time_formatted: "11:32:53 PM",
-                minutes_away: 13,
-              },
-              {
-                route_id: "6",
-                direction: "Uptown/Bronx",
-                arrival_time: 1742182650,
-                arrival_time_formatted: "11:37:30 PM",
-                minutes_away: 17,
-              },
-            ],
-            downtown: [
-              {
-                route_id: "6",
-                direction: "Downtown/Brooklyn",
-                arrival_time: 1742181922,
-                arrival_time_formatted: "11:25:22 PM",
-                minutes_away: 5,
-              },
-              {
-                route_id: "4",
-                direction: "Downtown/Brooklyn",
-                arrival_time: 1742182275,
-                arrival_time_formatted: "11:31:15 PM",
-                minutes_away: 11,
-              },
-              {
-                route_id: "6",
-                direction: "Downtown/Brooklyn",
-                arrival_time: 1742182915,
-                arrival_time_formatted: "11:41:55 PM",
-                minutes_away: 22,
-              },
-            ],
-          },
-          nqrw: {
-            name: "N/Q/R/W Trains (Broadway Line)",
-            uptown: [
-              {
-                route_id: "R",
-                direction: "Uptown/Bronx",
-                arrival_time: 1742181811,
-                arrival_time_formatted: "11:23:31 PM",
-                minutes_away: 3,
-              },
-              {
-                route_id: "N",
-                direction: "Uptown/Bronx",
-                arrival_time: 1742182531,
-                arrival_time_formatted: "11:35:31 PM",
-                minutes_away: 15,
-              },
-              {
-                route_id: "R",
-                direction: "Uptown/Bronx",
-                arrival_time: 1742182549,
-                arrival_time_formatted: "11:35:49 PM",
-                minutes_away: 16,
-              },
-            ],
-            downtown: [
-              {
-                route_id: "Q",
-                direction: "Downtown/Brooklyn",
-                arrival_time: 1742181654,
-                arrival_time_formatted: "11:20:54 PM",
-                minutes_away: 1,
-              },
-              {
-                route_id: "N",
-                direction: "Downtown/Brooklyn",
-                arrival_time: 1742182049,
-                arrival_time_formatted: "11:27:29 PM",
-                minutes_away: 7,
-              },
-              {
-                route_id: "Q",
-                direction: "Downtown/Brooklyn",
-                arrival_time: 1742182620,
-                arrival_time_formatted: "11:37:00 PM",
-                minutes_away: 17,
-              },
-            ],
-          },
-          l: {
-            name: "L Trains (Canarsie Line)",
-            westbound: [
-              {
-                route_id: "L",
-                direction: "To 8 Ave",
-                arrival_time: 1742181762,
-                arrival_time_formatted: "11:22:42 PM",
-                minutes_away: 2,
-              },
-              {
-                route_id: "L",
-                direction: "To 8 Ave",
-                arrival_time: 1742182153,
-                arrival_time_formatted: "11:29:13 PM",
-                minutes_away: 9,
-              },
-              {
-                route_id: "L",
-                direction: "To 8 Ave",
-                arrival_time: 1742182735,
-                arrival_time_formatted: "11:38:55 PM",
-                minutes_away: 19,
-              },
-            ],
-            eastbound: [
-              {
-                route_id: "L",
-                direction: "To Canarsie",
-                arrival_time: 1742181780,
-                arrival_time_formatted: "11:23:00 PM",
-                minutes_away: 3,
-              },
-              {
-                route_id: "L",
-                direction: "To Canarsie",
-                arrival_time: 1742182380,
-                arrival_time_formatted: "11:33:00 PM",
-                minutes_away: 13,
-              },
-              {
-                route_id: "L",
-                direction: "To Canarsie",
-                arrival_time: 1742182980,
-                arrival_time_formatted: "11:43:00 PM",
-                minutes_away: 23,
-              },
-            ],
-          },
-        },
-        all_trains: [
-          {
-            route_id: "Q",
-            direction: "Downtown/Brooklyn",
-            arrival_time: 1742181654,
-            arrival_time_formatted: "11:20:54 PM",
-            minutes_away: 1,
-          },
-          {
-            route_id: "6",
-            direction: "Uptown/Bronx",
-            arrival_time: 1742181745,
-            arrival_time_formatted: "11:22:25 PM",
-            minutes_away: 2,
-          },
-          {
-            route_id: "L",
-            direction: "To 8 Ave",
-            arrival_time: 1742181762,
-            arrival_time_formatted: "11:22:42 PM",
-            minutes_away: 2,
-          },
-        ],
+        // console.log(apiUrl, stationSlug, process.env.NEXT_PUBLIC_API_KEY)
+
+        const response = await fetch(`${apiUrl}/api/stations/${stationSlug}/trains`, {
+          headers: {
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
+
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setData(data);
+      } catch (err) {
+        console.error('Error fetching subway data:', err);
+        setError('Failed to load subway data. Please try again later.');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      // For Times Square, add 1/2/3 and 7 trains
-      if (selectedStation === "Times Square") {
-        sampleData.lines["123"] = {
-          name: "1/2/3 Trains (Broadway-7th Avenue Line)",
-          uptown: [
-            {
-              route_id: "1",
-              direction: "Uptown/Bronx",
-              arrival_time: 1742181800,
-              arrival_time_formatted: "11:23:20 PM",
-              minutes_away: 3,
-            },
-            {
-              route_id: "2",
-              direction: "Uptown/Bronx",
-              arrival_time: 1742182100,
-              arrival_time_formatted: "11:28:20 PM",
-              minutes_away: 8,
-            },
-          ],
-          downtown: [
-            {
-              route_id: "3",
-              direction: "Downtown/Brooklyn",
-              arrival_time: 1742181700,
-              arrival_time_formatted: "11:21:40 PM",
-              minutes_away: 2,
-            },
-            {
-              route_id: "1",
-              direction: "Downtown/Brooklyn",
-              arrival_time: 1742182200,
-              arrival_time_formatted: "11:30:00 PM",
-              minutes_away: 10,
-            },
-          ],
-        }
+    // Initial fetch
+    fetchStationData();
 
-        sampleData.lines["7"] = {
-          name: "7 Train (Flushing Line)",
-          westbound: [
-            {
-              route_id: "7",
-              direction: "To Hudson Yards",
-              arrival_time: 1742181750,
-              arrival_time_formatted: "11:22:30 PM",
-              minutes_away: 2,
-            },
-          ],
-          eastbound: [
-            {
-              route_id: "7",
-              direction: "To Flushing",
-              arrival_time: 1742181850,
-              arrival_time_formatted: "11:24:10 PM",
-              minutes_away: 4,
-            },
-          ],
-        }
-
-        // Add these trains to all_trains
-        sampleData.all_trains.push(
-          {
-            route_id: "1",
-            direction: "Uptown/Bronx",
-            arrival_time: 1742181800,
-            arrival_time_formatted: "11:23:20 PM",
-            minutes_away: 3,
-          },
-          {
-            route_id: "3",
-            direction: "Downtown/Brooklyn",
-            arrival_time: 1742181700,
-            arrival_time_formatted: "11:21:40 PM",
-            minutes_away: 2,
-          },
-          {
-            route_id: "7",
-            direction: "To Hudson Yards",
-            arrival_time: 1742181750,
-            arrival_time_formatted: "11:22:30 PM",
-            minutes_away: 2,
-          },
-          {
-            route_id: "7",
-            direction: "To Flushing",
-            arrival_time: 1742181850,
-            arrival_time_formatted: "11:24:10 PM",
-            minutes_away: 4,
-          },
-        )
-
-        // Sort all_trains by minutes_away
-        sampleData.all_trains.sort((a, b) => a.minutes_away - b.minutes_away)
-      }
-
-      // For Grand Central, add 7 train and S shuttle
-      if (selectedStation === "Grand Central") {
-        sampleData.lines["7"] = {
-          name: "7 Train (Flushing Line)",
-          westbound: [
-            {
-              route_id: "7",
-              direction: "To Hudson Yards",
-              arrival_time: 1742181750,
-              arrival_time_formatted: "11:22:30 PM",
-              minutes_away: 2,
-            },
-          ],
-          eastbound: [
-            {
-              route_id: "7",
-              direction: "To Flushing",
-              arrival_time: 1742181850,
-              arrival_time_formatted: "11:24:10 PM",
-              minutes_away: 4,
-            },
-          ],
-        }
-
-        sampleData.lines["s"] = {
-          name: "S Train (42 St Shuttle)",
-          westbound: [
-            {
-              route_id: "S",
-              direction: "To Times Square",
-              arrival_time: 1742181700,
-              arrival_time_formatted: "11:21:40 PM",
-              minutes_away: 1,
-            },
-            {
-              route_id: "S",
-              direction: "To Times Square",
-              arrival_time: 1742182000,
-              arrival_time_formatted: "11:26:40 PM",
-              minutes_away: 6,
-            },
-          ],
-          eastbound: [],
-        }
-
-        // Add these trains to all_trains
-        sampleData.all_trains.push(
-          {
-            route_id: "S",
-            direction: "To Times Square",
-            arrival_time: 1742181700,
-            arrival_time_formatted: "11:21:40 PM",
-            minutes_away: 1,
-          },
-          {
-            route_id: "7",
-            direction: "To Hudson Yards",
-            arrival_time: 1742181750,
-            arrival_time_formatted: "11:22:30 PM",
-            minutes_away: 2,
-          },
-          {
-            route_id: "7",
-            direction: "To Flushing",
-            arrival_time: 1742181850,
-            arrival_time_formatted: "11:24:10 PM",
-            minutes_away: 4,
-          },
-          {
-            route_id: "S",
-            direction: "To Times Square",
-            arrival_time: 1742182000,
-            arrival_time_formatted: "11:26:40 PM",
-            minutes_away: 6,
-          },
-        )
-
-        // Sort all_trains by minutes_away
-        sampleData.all_trains.sort((a, b) => a.minutes_away - b.minutes_away)
-      }
-
-      setData(sampleData)
-      setLoading(false)
-    }
-
-    fetchStationData()
+    // Set up refresh interval (every 30 seconds)
+    const intervalId = setInterval(fetchStationData, 30000);
 
     // Update time every second
     const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
+      setCurrentTime(new Date());
+    }, 1000);
 
-    return () => clearInterval(timer)
-  }, [selectedStation])
+    return () => {
+      clearInterval(intervalId);
+      clearInterval(timer);
+    };
+  }, [selectedStation]);
 
+  if (error) {
+    return (
+      <div className="bg-black text-amber-500 min-h-screen font-mono flex justify-center items-center">
+        <div className="text-2xl">{error}</div>
+      </div>
+    )
+  }
+  
   if (!data || loading) {
     return (
       <div className="bg-black text-amber-500 min-h-screen font-mono flex justify-center items-center">
